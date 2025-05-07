@@ -1,0 +1,503 @@
+1.Activation Functions & Optimization Algorithms
+import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import SGD, Adam, RMSprop
+
+# Load and preprocess the Iris dataset
+iris = load_iris()
+X = iris.data
+y = iris.target.reshape(-1, 1)
+
+# One-hot encode the target labels
+encoder = OneHotEncoder(sparse_output=False)
+y = encoder.fit_transform(y)
+
+# Split into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Standardize features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Function to build and train the model
+def build_and_train(activation, optimizer):
+    model = Sequential([
+ Dense(10, input_shape=(4,), activation=activation),
+        Dense(3, activation='softmax')  # Output layer
+    ])    
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
+    print(f"\nTraining with activation='{activation}' and optimizer='{optimizer.__class__.__name__}'")
+    model.fit(X_train, y_train, epochs=20, verbose=0)
+    loss, acc = model.evaluate(X_test, y_test, verbose=0)
+    print(f"Test Accuracy: {acc:.4f}")
+
+# Run the experiment
+activations = ['tanh']
+optimizers = [SGD(learning_rate=0.01), Adam(learning_rate=0.01), RMSprop(learning_rate=0.01)]
+
+for act in activations:
+    for opt in optimizers:
+        build_and_train(act, opt)
+
+
+
+  2. Weight Initialization Techniques
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras.initializers import HeNormal, GlorotUniform, RandomNormal
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+
+# Load & preprocess the Iris dataset
+X, y = load_iris(return_X_y=True)
+y = OneHotEncoder(sparse_output=False).fit_transform(y.reshape(-1, 1))
+X = StandardScaler().fit_transform(X)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Function to build & train model with given initializer
+def train_with_initializer(init):
+    model = Sequential([
+        Input(shape=(4,)),  # Use Input layer
+        Dense(10, activation='relu', kernel_initializer=init),
+        Dense(3, activation='softmax')
+    ])
+    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    print(f"\nUsing initializer: {init.__class__.__name__}")
+    model.fit(X_train, y_train, epochs=20, verbose=0)
+    _, acc = model.evaluate(X_test, y_test, verbose=0)
+    print(f"Test Accuracy: {acc:.4f}")
+
+# Try different initializers
+for initializer in [HeNormal(), GlorotUniform(), RandomNormal(mean=0.0, stddev=0.05)]:
+    train_with_initializer(initializer)
+
+3.Visualizing CNN Layers
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+def apply_filter(image, kernel):
+    return cv2.filter2D(image, -1, kernel)
+
+def main():
+    image = cv2.imread('/content/pexels-photo-120049.jpeg', cv2.IMREAD_COLOR)
+
+    if image is None:
+        print("Error: Could not load image")
+        return
+
+    edge_detection = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
+    sharpening = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+    box_blur = np.ones((3, 3), np.float32) / 9.0
+
+    edge_detected_image = apply_filter(image, edge_detection)
+    sharpened_image = apply_filter(image, sharpening)
+    blurred_image = apply_filter(image, box_blur)
+
+    titles = ['Original', 'Edge Detection', 'Sharpening', 'Blurring']
+    images = [image, edge_detected_image, sharpened_image, blurred_image]
+
+    plt.figure(figsize=(12, 6))
+    for i in range(4):
+        plt.subplot(1, 4, i + 1)
+        plt.imshow(cv2.cvtColor(images[i], cv2.COLOR_BGR2RGB))
+        plt.title(titles[i])
+        plt.axis('off')
+    plt.tight_layout()
+    plt.show()
+
+if __name__ == "__main__":
+    main()
+
+4.CNN for Classification
+import tensorflow as tf
+from tensorflow.keras import layers, models
+from tensorflow.keras.datasets import mnist
+
+# Load and preprocess MNIST
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+x_train = x_train.reshape(-1, 28, 28, 1).astype("float32") / 255.0
+x_test = x_test.reshape(-1, 28, 28, 1).astype("float32") / 255.0
+
+# One-hot encode labels
+y_train = tf.keras.utils.to_categorical(y_train, 10)
+y_test = tf.keras.utils.to_categorical(y_test, 10)
+
+# Build CNN model
+model = models.Sequential([
+    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Flatten(),
+    layers.Dense(64, activation='relu'),
+    layers.Dense(10, activation='softmax')  # 10 classes
+])
+
+# Compile and train
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+model.fit(x_train, y_train, epochs=5, batch_size=64, validation_split=0.1)
+
+# Evaluate
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print(f"\nTest Accuracy: {test_acc:.4f}")
+
+5.LSTM vs GRU for Time Series
+
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, GRU, Dense
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Generate some dummy time series data
+def generate_time_series(length, trend=0.1, amplitude=20, noise=2):
+    """Generates a synthetic time series."""
+    t = np.arange(length)
+    series = trend * t + amplitude * np.sin(t / 10) + np.random.randn(length) * noise
+    return series
+
+# Parameters
+sequence_length = 50
+prediction_horizon = 1
+train_size = 1000
+test_size = 200
+
+# Generate the time series
+time_series = generate_time_series(train_size + test_size + sequence_length)
+
+# Prepare data for supervised learning
+def prepare_data(series, seq_length, pred_horizon):
+
+    X, y = [], []
+    for i in range(len(series) - seq_length - pred_horizon + 1):
+        X.append(series[i:i + seq_length])
+        y.append(series[i + seq_length:i + seq_length + pred_horizon])
+    return np.array(X).reshape(-1, seq_length, 1), np.array(y)
+
+# Create training and testing sets
+X_train, y_train = prepare_data(time_series[:train_size + sequence_length], sequence_length, prediction_horizon)
+X_test, y_test = prepare_data(time_series[train_size:], sequence_length, prediction_horizon)
+
+
+
+# Function to build and train a model (LSTM or GRU)
+def build_and_train_model(model_type, units=64, epochs=20, batch_size=32):
+
+    model = Sequential()
+    if model_type == 'LSTM':
+        model.add(LSTM(units, input_shape=(X_train.shape[1], X_train.shape[2])))
+    elif model_type == 'GRU':
+        model.add(GRU(units, input_shape=(X_train.shape[1], X_train.shape[2])))
+    else:
+        raise ValueError("Invalid model_type. Must be 'LSTM' or 'GRU'")
+    model.add(Dense(prediction_horizon))  # Output layer
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.1, verbose=0)
+    return model, history
+
+# Train LSTM and GRU models
+lstm_model, lstm_history = build_and_train_model('LSTM', units=64, epochs=20, batch_size=32)
+gru_model, gru_history = build_and_train_model('GRU', units=64, epochs=20, batch_size=32)
+
+# Make predictions
+lstm_predictions = lstm_model.predict(X_test).flatten()
+gru_predictions = gru_model.predict(X_test).flatten()
+actual_values = y_test.flatten()
+
+
+# Plotting function
+def plot_results(actual, lstm_pred, gru_pred, title='Time Series Prediction Comparison'):
+    """Plots the actual values, LSTM predictions, and GRU predictions."""
+    plt.figure(figsize=(12, 6))
+    plt.plot(actual, label='Actual', marker='o', markersize=3)
+    plt.plot(lstm_pred, label='LSTM Predicted', marker='x', markersize=3)
+    plt.plot(gru_pred, label='GRU Predicted', marker='+', markersize=3)
+    plt.title(title)
+    plt.xlabel('Time Step')
+    plt.ylabel('Value')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+# Plot the predictions
+plot_results(actual_values, lstm_predictions, gru_predictions, title='LSTM vs. GRU Time Series Prediction')
+
+# Plotting the training loss
+plt.figure(figsize=(12, 6))
+plt.plot(lstm_history.history['loss'], label='LSTM Training Loss')
+plt.plot(gru_history.history['loss'], label='GRU Training Loss')
+plt.title('Training Loss Comparison')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+6.LSTM vs GRU for NLP
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, LSTM, Dense
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+
+# Sample corpus
+text = """
+In the beginning, God created the heavens and the earth.
+Now the earth was formless and empty, darkness was over the surface of the deep,
+and the Spirit of God was hovering over the waters.
+And God said, "Let there be light," and there was light.
+God saw that the light was good, and he separated the light from the darkness.
+"""
+
+# Tokenization
+tokenizer = Tokenizer()
+tokenizer.fit_on_texts([text])
+total_words = len(tokenizer.word_index) + 1
+
+# Create input sequences
+input_sequences = []
+for line in text.split('\n'):
+    token_list = tokenizer.texts_to_sequences([line])[0]
+    for i in range(1, len(token_list)):
+        n_gram_sequence = token_list[:i + 1]
+        input_sequences.append(n_gram_sequence)
+
+# Pad sequences
+max_sequence_length = max([len(x) for x in input_sequences])
+input_sequences = pad_sequences(input_sequences, maxlen=max_sequence_length, padding='pre')
+
+# Prepare features and labels
+X = input_sequences[:, :-1]
+y = input_sequences[:, -1]
+y = tf.keras.utils.to_categorical(y, num_classes=total_words)
+
+# Build the LSTM model
+model = Sequential()
+model.add(Embedding(total_words, 4, input_length=max_sequence_length - 1))
+model.add(LSTM(150))
+model.add(Dense(total_words, activation='softmax'))
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Train the model and store the history
+history = model.fit(X, y, epochs=100, verbose=1)
+
+# Function to predict the next word
+def predict_next_word(seed_text, next_words=1):
+    for _ in range(next_words):
+        token_list = tokenizer.texts_to_sequences([seed_text])[0]
+        token_list = pad_sequences([token_list], maxlen=max_sequence_length - 1, padding='pre')
+        predicted = np.argmax(model.predict(token_list), axis=-1)
+        output_word = ""
+        for word, index in tokenizer.word_index.items():
+            if index == predicted:
+                output_word = word
+                break
+        seed_text += " " + output_word
+    return seed_text
+
+# Example usage
+input_text = "God created the"
+predicted_text = predict_next_word(input_text, next_words=3)
+print(f"Predicted text: {predicted_text}")
+
+# Visualization of training history
+plt.figure(figsize=(12, 6))
+
+# Accuracy plot
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.title('Model Accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(loc='upper left')
+
+# Loss plot
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Train Loss')
+plt.title('Model Loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(loc='upper left')
+
+plt.tight_layout()
+plt.show()
+
+# Visualizing the embeddings
+embeddings = model.layers[0].get_weights()[0]  # Get the weights of the embedding layer
+tsne = TSNE(n_components=2, random_state=0)
+embeddings_2d = tsne.fit_transform(embeddings)
+
+# Create a scatter plot of the embeddings
+plt.figure(figsize=(10, 10))
+plt.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1])
+
+# Annotate the points with the words
+for word, i in tokenizer.word_index.items():
+    plt.annotate(word, (embeddings_2d[i-1, 0], embeddings_2d[i-1, 1]), fontsize=9)
+
+plt.title('Word Embeddings Visualization')
+plt.xlabel('t-SNE Component 1')
+plt.ylabel('t-SNE Component 2')
+plt.grid()
+plt.show()
+
+# Print word embeddings as vectors
+word_embeddings = {word: embeddings[i-1] for word, i in tokenizer.word_index.items()} # Corrected indexing
+for word, vector in word_embeddings.items():
+    print(f"Word: {word}, Embedding: {vector}")
+
+7.Transformer for Language Translation
+# eng_sentences = ["hello", "how are you", "good morning"]
+# fre_sentences = ["<start> bonjour <end>", "<start> comment ça va <end>", "<start> bonjour matin <end>"]
+# eng_sentences = ["hello","Thank you","how are you"]
+# fre_sentences = ["<start> bonjour <end>","<start> merci <end>","<start> comment ça va <end>"]
+eng_sentences = ["hello","Thank you"]
+fre_sentences = ["<start> bonjour <end>","<start> merci <end>"]
+
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+import tensorflow as tf
+import numpy as np
+
+# English tokenizer
+eng_tokenizer = Tokenizer()
+eng_tokenizer.fit_on_texts(eng_sentences)
+eng_seq = eng_tokenizer.texts_to_sequences(eng_sentences)
+max_eng_len = max(len(seq) for seq in eng_seq)
+eng_seq = pad_sequences(eng_seq, maxlen=max_eng_len, padding='post')
+
+# French tokenizer
+fre_tokenizer = Tokenizer(filters='', oov_token='<unk>')
+fre_tokenizer.fit_on_texts(fre_sentences)
+fre_seq = fre_tokenizer.texts_to_sequences(fre_sentences)
+max_fre_len = max(len(seq) for seq in fre_seq)
+fre_seq = pad_sequences(fre_seq, maxlen=max_fre_len, padding='post')
+
+# Shift French sequences for decoder input/output
+decoder_input = fre_seq[:, :-1]
+decoder_target = fre_seq[:, 1:]
+
+print("English vocab size:", len(eng_tokenizer.word_index) + 1)
+print("French vocab size:", len(fre_tokenizer.word_index) + 1)
+
+from tensorflow.keras import Input, Model
+from tensorflow.keras.layers import Embedding, LSTM, Dense
+
+eng_vocab_size = len(eng_tokenizer.word_index) + 1
+fre_vocab_size = len(fre_tokenizer.word_index) + 1
+embedding_dim = 64
+latent_dim = 128
+
+# Encoder
+encoder_inputs = Input(shape=(max_eng_len,))
+enc_emb = Embedding(eng_vocab_size, embedding_dim)(encoder_inputs)
+_, state_h, state_c = LSTM(latent_dim, return_state=True)(enc_emb)
+encoder_states = [state_h, state_c]
+
+# Decoder
+decoder_inputs = Input(shape=(max_fre_len - 1,))
+dec_emb = Embedding(fre_vocab_size, embedding_dim)(decoder_inputs)
+decoder_lstm = LSTM(latent_dim, return_sequences=True, return_state=False)
+decoder_outputs = decoder_lstm(dec_emb, initial_state=encoder_states)
+decoder_dense = Dense(fre_vocab_size, activation='softmax')
+decoder_outputs = decoder_dense(decoder_outputs)
+
+# Full model
+model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.summary()
+
+model.fit([eng_seq, decoder_input], decoder_target, epochs=50, verbose=0)
+
+def translate(input_text):
+    inp = eng_tokenizer.texts_to_sequences([input_text])
+    inp = pad_sequences(inp, maxlen=max_eng_len, padding='post')
+
+    start_token = fre_tokenizer.word_index['<start>']
+    end_token = fre_tokenizer.word_index['<end>']
+
+    out = [start_token]
+
+    for _ in range(max_fre_len - 1):  # max_fre_len - 1 because decoder is trained that way
+        dec_inp = pad_sequences([out], maxlen=max_fre_len - 1, padding='post')
+        pred = model.predict([inp, dec_inp], verbose=0)
+
+        # Use the last timestep prediction
+        next_token = np.argmax(pred[0, len(out)-1])
+
+        if next_token == end_token:
+            break
+        out.append(next_token)
+
+    translated = ' '.join([fre_tokenizer.index_word.get(i, '') for i in out[1:]])
+    return translated
+print(translate("hello"))
+print(translate("thank you"))
+
+print(translate("hello how are you"))
+
+8.Hugging Face Model Visualization
+#8th
+import torch
+from transformers import BartTokenizer, BartForConditionalGeneration
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+
+# 🔹 Load BART model with attentions enabled
+model_name = "facebook/bart-large-cnn"
+tokenizer = BartTokenizer.from_pretrained(model_name)
+model = BartForConditionalGeneration.from_pretrained(model_name, output_attentions=True)
+
+# 🔹 Input text
+text = """Albert Einstein was a theoretical physicist who revolutionized science with his theory of relativity.
+He also made significant contributions to quantum mechanics. He received the Nobel Prize in 1921 for the photoelectric effect."""
+
+# 🔹 Tokenize
+inputs = tokenizer(text, return_tensors="pt", max_length=512, truncation=True)
+input_ids = inputs["input_ids"]
+
+# 🔹 Generate summary
+output = model.generate(
+    input_ids,
+    max_length=40,
+    min_length=10,
+    num_beams=4,
+    early_stopping=True,
+    output_attentions=True,
+    return_dict_in_generate=True
+)
+
+summary_ids = output.sequences[0]
+summary_tokens = tokenizer.convert_ids_to_tokens(summary_ids)
+input_tokens = tokenizer.convert_ids_to_tokens(input_ids[0])
+
+# 🔹 Get cross-attention from first decoder layer, averaged across heads
+cross_attn = output.cross_attentions[0]  # List of tuples (layers)
+avg_attn = cross_attn[0].mean(dim=0).squeeze().detach().numpy()  # (target_len, source_len)
+
+# 🔹 Truncate tokens to match shapes
+target_tokens = summary_tokens[:avg_attn.shape[0]]
+source_tokens = input_tokens[:avg_attn.shape[1]]
+
+# 🔹 Plot attention heatmap
+plt.figure(figsize=(12, 6))
+sns.heatmap(avg_attn, xticklabels=source_tokens, yticklabels=target_tokens, cmap="YlGnBu")
+plt.xlabel("Input Tokens")
+plt.ylabel("Generated Summary Tokens")
+plt.title("Cross-Attention Heatmap (BART)")
+plt.xticks(rotation=90)
+plt.tight_layout()
+plt.show()
